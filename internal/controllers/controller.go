@@ -230,7 +230,7 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) Reconcile(ctx context.Cont
 		Group:    resourceGV.Group,
 		Resource: scaleTargetRef.Kind,
 	}
-
+	//这个scaleClient就相当于对那些可扩所容的东西进行了一层抽象，以前可能需要对clientSet.Deployment().GET(),现在有个scale抽象就能用这一个客户端来获取修改更新可扩所容的对象了
 	scale, err := r.ScaleClient.Scales(instance.Namespace).Get(ctx, targetGR, scaleTargetRef.Name, metav1.GetOptions{})
 	if err != nil {
 		logger.Error(err, "failed to get scale subresource", "scaleTargetRef", scaleTargetRef)
@@ -418,7 +418,7 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) processModels(ctx context.
 				ReplicaHistory:    []jamiethompsonmev1alpha1.TimestampedReplicas{},
 			}
 		}
-
+		//暂时理解为，过了这个interval就会开始执行，注意是开始，就开始那么一下
 		if model.StartInterval != nil {
 			if modelHistory.StartTime == nil {
 				startTime := nextInterval(now, model.StartInterval.Duration)
@@ -446,6 +446,7 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) processModels(ctx context.
 		}
 
 		// Calculate if it's been too long since the last data recorded
+		//history里面的数据若是存在太久则会被丢弃
 		if model.ResetDuration != nil && len(modelHistory.ReplicaHistory) > 0 {
 			latest := modelHistory.ReplicaHistory[0].Time.Time
 			for _, timestampedReplica := range modelHistory.ReplicaHistory {

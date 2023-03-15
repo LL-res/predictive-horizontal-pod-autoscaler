@@ -35,6 +35,7 @@ const (
 const (
 	TypeHoltWinters = "HoltWinters"
 	TypeLinear      = "Linear"
+	TypeGRU         = "GRU"
 )
 
 const (
@@ -120,6 +121,16 @@ type HoltWinters struct {
 	// +optional
 	RuntimeTuningFetchHook *HookDefinition `json:"runtimeTuningFetchHook"`
 }
+type GRU struct {
+
+	// how far in second GRU will use to train
+	// +optional
+	TrainSize int `json:"trainSize"`
+
+	LookAhead int `json:"lookAhead"`
+	//replica size use to predict
+	PredictSize int `json:"predictSize"`
+}
 
 // Model represents a prediction model to use, e.g. a linear regression
 type Model struct {
@@ -173,6 +184,8 @@ type Model struct {
 	// 'HoltWinters'
 	// +optional
 	HoltWinters *HoltWinters `json:"holtWinters"`
+
+	GRU *GRU `json:"gru"`
 }
 
 // TimestampedReplicas is a replica count paired with the time that the replica count was created at.
