@@ -244,7 +244,8 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) Reconcile(ctx context.Cont
 			"currentReplicas", scale.Spec.Replicas)
 		return reconcile.Result{RequeueAfter: defaultErrorRetryPeriod}, err
 	}
-
+	//predictedReplicas中包含一个calculated replica与所有模型本轮的预测结果
+	//phpaData中包含所有的历史数据
 	// This function doesn't return any errors, since if it fails to process a model it will skip and continue
 	// processing without that model's results
 	predictedReplicas, phpaData := r.processModels(ctx, instance, phpaData, now, scale.Spec.Replicas,
@@ -535,7 +536,7 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) processModels(ctx context.
 		modelHistory.ReplicaHistory = prunedHistory
 		phpaData.ModelHistories[model.Name] = modelHistory
 	}
-
+	//检查map中的model是否在spec中都有
 	// Delete any model data that exists without a corresponding model spec
 	for modelName := range phpaData.ModelHistories {
 		exists := false
