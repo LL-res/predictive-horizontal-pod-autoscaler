@@ -340,6 +340,8 @@ type PredictiveHorizontalPodAutoscalerStatus struct {
 	// +listType=atomic
 	// +optional
 	CurrentMetrics []autoscalingv2.MetricStatus `json:"currentMetrics"`
+
+	MonitorStatus string
 }
 
 // +kubebuilder:object:root=true

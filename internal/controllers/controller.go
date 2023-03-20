@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/collector"
 	"time"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -93,6 +94,7 @@ type PredictiveHorizontalPodAutoscalerReconciler struct {
 	Gatherer    k8shorizmetrics.Gatherer
 	Evaluator   k8shorizmetrics.Evaluator
 	Predicter   prediction.Predicter
+	Collector   collector.Collector
 }
 
 //+kubebuilder:rbac:groups=jamiethompson.me,resources=predictivehorizontalpodautoscalers,verbs=get;list;watch;create;update;patch;delete
@@ -611,10 +613,16 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) preScaleStatusCheck(ctx co
 			return fmt.Errorf("failed to update status of resource: %w", err)
 		}
 	}
-
+	if instance.Status.MonitorStatus != "up" {
+		if err := setUpMonitorService(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
-
+func setUpMonitorService() error {
+	return nil
+}
 func fillBehaviorDefaults(behavior *autoscalingv2.HorizontalPodAutoscalerBehavior) *autoscalingv2.HorizontalPodAutoscalerBehavior {
 	// Defaults sourced from these sources:
 	// https://github.com/kubernetes/enhancements/blob/7f681415a0011a0f6f98d9f112eeb7731f9eacd7/keps/sig-autoscaling/853-configurable-hpa-scale-velocity/README.md
