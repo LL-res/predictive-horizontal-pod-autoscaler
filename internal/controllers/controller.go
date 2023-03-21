@@ -212,6 +212,7 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) Reconcile(ctx context.Cont
 
 	// Check the last scale of the PHPA, make sure we're not scaling too early
 	lastScaleTime := instance.Status.LastScaleTime
+	//扩容时间还没到，还需等待
 	if lastScaleTime != nil && now.Add(-syncPeriod).Before(lastScaleTime.Time) {
 		timeUntilReconcile := instance.Status.LastScaleTime.Time.Add(syncPeriod).Sub(now)
 		logger.V(1).Info("Resource already scaled, queueing up reconcile for the next sync period",

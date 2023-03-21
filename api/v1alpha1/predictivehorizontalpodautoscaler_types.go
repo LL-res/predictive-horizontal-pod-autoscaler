@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 )
 
 const (
@@ -127,9 +128,10 @@ type GRU struct {
 	// +optional
 	TrainSize int `json:"trainSize"`
 
-	LookAhead int `json:"lookAhead"`
+	LookAhead time.Duration `json:"lookAhead"`
 	//replica size use to predict
-	PredictSize int `json:"predictSize"`
+	PredictSize      int     `json:"predictSize"`
+	ScaleUpThreshold float64 `json:"scaleUpThreshold"`
 	//retrain interval
 	UpdateInterval *metav1.Duration `json:"updateInterval"`
 }
@@ -226,7 +228,8 @@ type ModelHistory struct {
 	// startTime is the time after which the model should start applying and recording data. If it is before this time
 	// no data will be recorded and the model will be skipped.
 	// +optional
-	StartTime *metav1.Time `json:"startTime"`
+	StartTime     *metav1.Time         `json:"startTime"`
+	MetricHistory []TimestampedMetrics `json:"metricHistory"`
 }
 
 // PredictiveHorizontalPodAutoscalerSpec defines the desired state of PredictiveHorizontalPodAutoscaler

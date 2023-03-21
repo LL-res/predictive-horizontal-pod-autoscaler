@@ -23,11 +23,21 @@ import (
 	jamiethompsonmev1alpha1 "github.com/jthomperoo/predictive-horizontal-pod-autoscaler/api/v1alpha1"
 )
 
+type AlgorithmRunner interface {
+	RunAlgorithmWithValue(algorithmPath string, value string, timeout int) (string, error)
+}
+
 // Predicter is an interface providing methods for making a prediction based on a model, a time to predict and values
 type Predicter interface {
-	GetPrediction(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error)
+	//PredictByReplica(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error)
+	Predict(model *jamiethompsonmev1alpha1.Model, metricHistory []jamiethompsonmev1alpha1.TimestampedMetrics) (int32, error)
 	PruneHistory(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error)
 	GetType() string
+	Train() error
+}
+type Base struct {
+	MetricHistory []jamiethompsonmev1alpha1.TimestampedMetrics
+	Runner        AlgorithmRunner
 }
 
 // ModelPredict is used to route a prediction to the appropriate predicter based on the model provided
@@ -37,10 +47,10 @@ type ModelPredict struct {
 }
 
 // GetPrediction generates a prediction for any model that the ModelPredict has been set up to use
-func (m *ModelPredict) GetPrediction(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
+func (m *ModelPredict) Predict(model *jamiethompsonmev1alpha1.Model, metricHistory []jamiethompsonmev1alpha1.TimestampedMetrics) (int32, error) {
 	for _, predicter := range m.Predicters {
 		if predicter.GetType() == model.Type {
-			return predicter.GetPrediction(model, replicaHistory)
+			return predicter.Predict(model, metricHistory)
 		}
 	}
 	return 0, fmt.Errorf("unknown model type '%s'", model.Type)
@@ -58,5 +68,5 @@ func (m *ModelPredict) PruneHistory(model *jamiethompsonmev1alpha1.Model, replic
 
 // GetType returns the type of the ModelPredict, "Model"
 func (m *ModelPredict) GetType() string {
-	return "Model"
+	return "Models"
 }

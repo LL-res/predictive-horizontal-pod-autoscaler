@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	jamiethompsonmev1alpha1 "github.com/jthomperoo/predictive-horizontal-pod-autoscaler/api/v1alpha1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/prediction"
+	"log"
 	"sort"
 	"time"
 )
@@ -18,16 +19,15 @@ type AlgorithmRunner interface {
 	RunAlgorithmWithValue(algorithmPath string, value string, timeout int) (string, error)
 }
 
+// 在controller里控制要不要进行predict或者train，status里记录了模型的状态
+// 在这里的预测服务只要专心进行预测即可
 // Predict provides logic for using GRU to make a prediction
-type Predict struct {
-	Runner     AlgorithmRunner
-	trained    bool         // true : 训练完成可以预测
-	lastUpdate *metav1.Time // timestamp
+type GRU struct {
+	prediction.Base
 }
 type GRUParameters struct {
-	LookAhead      int                                           `json:"lookAhead"`
-	ReplicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas `json:"replicaHistory"`
-	MetricsHistory []jamiethompsonmev1alpha1.TimestampedMetrics  `json:"metricsHistory"`
+	LookAhead      time.Duration                                `json:"lookAhead"`
+	MetricsHistory []jamiethompsonmev1alpha1.TimestampedMetrics `json:"metricsHistory"`
 	// predict or train
 	Status int `json:"status"`
 }
@@ -36,7 +36,7 @@ type GRUResult struct {
 	Trained bool `json:"trained"`
 }
 
-func (p *Predict) GetPrediction(model *jamiethompsonmev1alpha1.Model, metricsHistory []jamiethompsonmev1alpha1.TimestampedMetrics, lastUpdateTime time.Time) (int32, error) {
+func (g *GRU) Predict(model *jamiethompsonmev1alpha1.Model, metricsHistory []jamiethompsonmev1alpha1.TimestampedMetrics, lastUpdateTime time.Time) (int32, error) {
 	if model.GRU == nil {
 		return 0, errors.New("no GRU configuration provided for model")
 	}
@@ -82,7 +82,7 @@ func (p *Predict) GetPrediction(model *jamiethompsonmev1alpha1.Model, metricsHis
 	return int32(res.Value), nil
 }
 
-func (p *Predict) PruneHistory(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error) {
+func (g *GRU) PruneHistory(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error) {
 	if model.Linear == nil {
 		return nil, errors.New("no GRU configuration provided for model")
 	}
@@ -104,6 +104,25 @@ func (p *Predict) PruneHistory(model *jamiethompsonmev1alpha1.Model, replicaHist
 	return replicaHistory, nil
 }
 
-func (p *Predict) GetType() string {
+func (g *GRU) GetType() string {
 	return jamiethompsonmev1alpha1.TypeGRU
+}
+func (g *GRU) Train(model *jamiethompsonmev1alpha1.Model) error {
+	if len(g.MetricHistory) < model.GRU.TrainSize {
+		return errors.New("no sufficient data to train or predict")
+	}
+	parameters, err := json.Marshal(GRUParameters{
+		LookAhead:      model.GRU.LookAhead,
+		MetricsHistory: g.MetricHistory,
+	})
+	if err != nil {
+		return err
+	}
+	timeout := defaultTimeout
+	res, err := g.Runner.RunAlgorithmWithValue(algorithmPath, string(parameters), timeout)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
 }
