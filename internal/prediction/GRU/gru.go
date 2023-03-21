@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	jamiethompsonmev1alpha1 "github.com/jthomperoo/predictive-horizontal-pod-autoscaler/api/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sort"
+	"time"
 )
 
 const (
@@ -18,34 +20,46 @@ type AlgorithmRunner interface {
 
 // Predict provides logic for using GRU to make a prediction
 type Predict struct {
-	Runner  AlgorithmRunner
-	trained bool // true : 训练完成可以预测
+	Runner     AlgorithmRunner
+	trained    bool         // true : 训练完成可以预测
+	lastUpdate *metav1.Time // timestamp
 }
 type GRUParameters struct {
 	LookAhead      int                                           `json:"lookAhead"`
 	ReplicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas `json:"replicaHistory"`
-	// predict train
-	Status string `json:"status"`
+	MetricsHistory []jamiethompsonmev1alpha1.TimestampedMetrics  `json:"metricsHistory"`
+	// predict or train
+	Status int `json:"status"`
 }
 type GRUResult struct {
 	Value   int  `json:"value"`
 	Trained bool `json:"trained"`
 }
 
-func (p *Predict) GetPrediction(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
+func (p *Predict) GetPrediction(model *jamiethompsonmev1alpha1.Model, metricsHistory []jamiethompsonmev1alpha1.TimestampedMetrics, lastUpdateTime time.Time) (int32, error) {
 	if model.GRU == nil {
 		return 0, errors.New("no GRU configuration provided for model")
 	}
 	if !p.trained {
 		return 0, errors.New("model not trained")
 	}
-	if len(replicaHistory) < model.GRU.PredictSize {
-		return 0, errors.New("no sufficent evaluations provided for GRU model")
+	var status int
+	now := time.Now()
+	// 00 stand for train predict
+	//e.g. 01 predict ,11 train and predict,10 train
+	// predictSize < trainSize
+	switch {
+	case len(metricsHistory) < model.GRU.PredictSize:
+		return 0, errors.New("no sufficient data to train or predict")
+	case len(metricsHistory) > model.GRU.TrainSize && now.Add(-model.GRU.UpdateInterval.Duration).After(lastUpdateTime):
+		status = 3
+	default:
+		status = 1
 	}
 	parameters, err := json.Marshal(GRUParameters{
 		LookAhead:      model.GRU.LookAhead,
-		ReplicaHistory: replicaHistory,
-		Status:         "predict",
+		MetricsHistory: metricsHistory,
+		Status:         status,
 	})
 	if err != nil {
 		panic(err)

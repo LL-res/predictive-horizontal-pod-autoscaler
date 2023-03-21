@@ -130,6 +130,8 @@ type GRU struct {
 	LookAhead int `json:"lookAhead"`
 	//replica size use to predict
 	PredictSize int `json:"predictSize"`
+	//retrain interval
+	UpdateInterval *metav1.Duration `json:"updateInterval"`
 }
 
 // Model represents a prediction model to use, e.g. a linear regression
@@ -194,6 +196,14 @@ type TimestampedReplicas struct {
 	Time *metav1.Time `json:"time"`
 	// replicas is the replica count at the time.
 	Replicas int32 `json:"replicas"`
+}
+type TimestampedMetrics struct {
+	// time is the time that the replica count was created at.
+	Time *metav1.Time `json:"time"`
+	// metric is the metric value at the time.
+	Metric float64 `json:"metric"`
+	// the type of the metric e.g. cpu, memory,qps
+	Type string `json:"type"`
 }
 
 // PredictiveHorizontalPodAutoscalerData is the data storage format for the PHPA, this is stored in a ConfigMap
@@ -302,6 +312,9 @@ type PredictiveHorizontalPodAutoscalerStatus struct {
 	// +optional
 	LastScaleTime *metav1.Time `json:"lastScaleTime,omitempty"`
 
+	// lastUpdateTime is the last time the ML model has been updated
+	// +optional
+	LastUpdatetime *metav1.Time `json:"lastUpdatetime,omitempty"`
 	// scaleUpReplicaHistory is a list of timestamped replicas within the scale up stabilization window.
 	// Used for calculating upscale stabilization.
 	// +optional
