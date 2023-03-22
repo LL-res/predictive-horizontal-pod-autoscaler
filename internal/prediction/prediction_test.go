@@ -39,7 +39,7 @@ func TestModelPredict_GetPrediction(t *testing.T) {
 		description    string
 		expected       int32
 		expectedErr    error
-		predicters     []prediction.Predicter
+		predictors     []prediction.predictor
 		model          *jamiethompsonmev1alpha1.Model
 		replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas
 	}{
@@ -47,7 +47,7 @@ func TestModelPredict_GetPrediction(t *testing.T) {
 			description: "Unknown model type",
 			expected:    0,
 			expectedErr: errors.New(`unknown model type 'invalid'`),
-			predicters:  []prediction.Predicter{},
+			predictors:  []prediction.predictor{},
 			model: &jamiethompsonmev1alpha1.Model{
 				Type: "invalid",
 				Linear: &jamiethompsonmev1alpha1.Linear{
@@ -60,8 +60,8 @@ func TestModelPredict_GetPrediction(t *testing.T) {
 			description: "GetIDsToRemove fail child predictor",
 			expected:    0,
 			expectedErr: errors.New("fail to get prediction from child"),
-			predicters: []prediction.Predicter{
-				&fake.Predicter{
+			predictors: []prediction.predictor{
+				&fake.predictor{
 					GetPredictionReactor: func(model *jamiethompsonmev1alpha1.Model, evaluations []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
 						return 0, errors.New("fail to get prediction from child")
 					},
@@ -81,8 +81,8 @@ func TestModelPredict_GetPrediction(t *testing.T) {
 			description: "Successful prediction, single available model",
 			expected:    3,
 			expectedErr: nil,
-			predicters: []prediction.Predicter{
-				&fake.Predicter{
+			predictors: []prediction.predictor{
+				&fake.predictor{
 					GetPredictionReactor: func(model *jamiethompsonmev1alpha1.Model, evaluations []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
 						return 3, nil
 					},
@@ -102,8 +102,8 @@ func TestModelPredict_GetPrediction(t *testing.T) {
 			description: "Successful prediction, three available models",
 			expected:    5,
 			expectedErr: nil,
-			predicters: []prediction.Predicter{
-				&fake.Predicter{
+			predictors: []prediction.predictor{
+				&fake.predictor{
 					GetPredictionReactor: func(model *jamiethompsonmev1alpha1.Model, evaluations []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
 						return 0, errors.New("incorrect model")
 					},
@@ -111,7 +111,7 @@ func TestModelPredict_GetPrediction(t *testing.T) {
 						return "incorrect-model"
 					},
 				},
-				&fake.Predicter{
+				&fake.predictor{
 					GetPredictionReactor: func(model *jamiethompsonmev1alpha1.Model, evaluations []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
 						return 0, errors.New("incorrect model")
 					},
@@ -119,7 +119,7 @@ func TestModelPredict_GetPrediction(t *testing.T) {
 						return "incorrect-model-2"
 					},
 				},
-				&fake.Predicter{
+				&fake.predictor{
 					GetPredictionReactor: func(model *jamiethompsonmev1alpha1.Model, evaluations []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
 						return 5, nil
 					},
@@ -139,10 +139,10 @@ func TestModelPredict_GetPrediction(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			predicter := &prediction.ModelPredict{
-				Predicters: test.predicters,
+			predictor := &prediction.ModelPredict{
+				predictors: test.predictors,
 			}
-			result, err := predicter.GetPrediction(test.model, test.replicaHistory)
+			result, err := predictor.GetPrediction(test.model, test.replicaHistory)
 			if !cmp.Equal(&err, &test.expectedErr, equateErrorMessage) {
 				t.Errorf("error mismatch (-want +got):\n%s", cmp.Diff(test.expectedErr, err, equateErrorMessage))
 				return
@@ -166,7 +166,7 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 		description    string
 		expected       []jamiethompsonmev1alpha1.TimestampedReplicas
 		expectedErr    error
-		predicters     []prediction.Predicter
+		predictors     []prediction.predictor
 		model          *jamiethompsonmev1alpha1.Model
 		replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas
 	}{
@@ -174,7 +174,7 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 			description: "Unknown model type",
 			expected:    nil,
 			expectedErr: errors.New(`unknown model type 'invalid'`),
-			predicters:  []prediction.Predicter{},
+			predictors:  []prediction.predictor{},
 			model: &jamiethompsonmev1alpha1.Model{
 				Type: "invalid",
 				Linear: &jamiethompsonmev1alpha1.Linear{
@@ -196,8 +196,8 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 				},
 			},
 			expectedErr: nil,
-			predicters: []prediction.Predicter{
-				&fake.Predicter{
+			predictors: []prediction.predictor{
+				&fake.predictor{
 					PruneHistoryReactor: func(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error) {
 						replicaHistory = replicaHistory[:len(replicaHistory)-1]
 						return replicaHistory, nil
@@ -240,8 +240,8 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 				},
 			},
 			expectedErr: nil,
-			predicters: []prediction.Predicter{
-				&fake.Predicter{
+			predictors: []prediction.predictor{
+				&fake.predictor{
 					PruneHistoryReactor: func(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error) {
 						replicaHistory = replicaHistory[:len(replicaHistory)-1]
 						return replicaHistory, nil
@@ -250,7 +250,7 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 						return "incorrect-model"
 					},
 				},
-				&fake.Predicter{
+				&fake.predictor{
 					PruneHistoryReactor: func(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error) {
 						replicaHistory = replicaHistory[:len(replicaHistory)-1]
 						return replicaHistory, nil
@@ -259,7 +259,7 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 						return "incorrect-model-2"
 					},
 				},
-				&fake.Predicter{
+				&fake.predictor{
 					PruneHistoryReactor: func(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error) {
 						replicaHistory = replicaHistory[:len(replicaHistory)-1]
 						return replicaHistory, nil
@@ -293,10 +293,10 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			predicter := &prediction.ModelPredict{
-				Predicters: test.predicters,
+			predictor := &prediction.ModelPredict{
+				predictors: test.predictors,
 			}
-			result, err := predicter.PruneHistory(test.model, test.replicaHistory)
+			result, err := predictor.PruneHistory(test.model, test.replicaHistory)
 			if !cmp.Equal(&err, &test.expectedErr, equateErrorMessage) {
 				t.Errorf("error mismatch (-want +got):\n%s", cmp.Diff(test.expectedErr, err, equateErrorMessage))
 				return
@@ -320,8 +320,8 @@ func TestModelPredict_GetType(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			predicter := &prediction.ModelPredict{}
-			result := predicter.GetType()
+			predictor := &prediction.ModelPredict{}
+			result := predictor.GetType()
 			if !cmp.Equal(test.expected, result) {
 				t.Errorf("type mismatch (-want +got):\n%s", cmp.Diff(test.expected, result))
 			}

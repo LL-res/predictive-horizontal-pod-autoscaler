@@ -44,7 +44,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 		description    string
 		expected       int32
 		expectedErr    error
-		predicter      *linear.Predict
+		predictor      *linear.Predict
 		model          *jamiethompsonmev1alpha1.Model
 		replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas
 	}{
@@ -52,7 +52,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 			description:    "Fail no Linear configuration",
 			expected:       0,
 			expectedErr:    errors.New("no Linear configuration provided for model"),
-			predicter:      &linear.Predict{},
+			predictor:      &linear.Predict{},
 			model:          &jamiethompsonmev1alpha1.Model{},
 			replicaHistory: []jamiethompsonmev1alpha1.TimestampedReplicas{},
 		},
@@ -60,7 +60,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 			description: "Fail no evaluations",
 			expected:    0,
 			expectedErr: errors.New("no evaluations provided for Linear regression model"),
-			predicter:   &linear.Predict{},
+			predictor:   &linear.Predict{},
 			model: &jamiethompsonmev1alpha1.Model{
 				Type: jamiethompsonmev1alpha1.TypeLinear,
 				Linear: &jamiethompsonmev1alpha1.Linear{
@@ -74,7 +74,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 			description: "Success, only one evaluation, return without the prediction",
 			expected:    32,
 			expectedErr: nil,
-			predicter:   &linear.Predict{},
+			predictor:   &linear.Predict{},
 			model: &jamiethompsonmev1alpha1.Model{
 				Type: jamiethompsonmev1alpha1.TypeLinear,
 				Linear: &jamiethompsonmev1alpha1.Linear{
@@ -92,7 +92,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 			description: "Fail execution of algorithm fails",
 			expected:    0,
 			expectedErr: errors.New("algorithm fail"),
-			predicter: &linear.Predict{
+			predictor: &linear.Predict{
 				Runner: &fake.Run{
 					RunAlgorithmWithValueReactor: func(algorithmPath, value string, timeout int) (string, error) {
 						return "", errors.New("algorithm fail")
@@ -119,7 +119,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 			description: "Fail algorithm returns non-integer castable value",
 			expected:    0,
 			expectedErr: errors.New(`strconv.Atoi: parsing "invalid": invalid syntax`),
-			predicter: &linear.Predict{
+			predictor: &linear.Predict{
 				Runner: &fake.Run{
 					RunAlgorithmWithValueReactor: func(algorithmPath, value string, timeout int) (string, error) {
 						return "invalid", nil
@@ -146,7 +146,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 			description: "Success",
 			expected:    3,
 			expectedErr: nil,
-			predicter: &linear.Predict{
+			predictor: &linear.Predict{
 				Runner: &fake.Run{
 					RunAlgorithmWithValueReactor: func(algorithmPath, value string, timeout int) (string, error) {
 						return "3", nil
@@ -173,7 +173,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 			description: "Success, use custom timeout",
 			expected:    3,
 			expectedErr: nil,
-			predicter: &linear.Predict{
+			predictor: &linear.Predict{
 				Runner: &fake.Run{
 					RunAlgorithmWithValueReactor: func(algorithmPath, value string, timeout int) (string, error) {
 						return "3", nil
@@ -200,7 +200,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			result, err := test.predicter.GetPrediction(test.model, test.replicaHistory)
+			result, err := test.predictor.GetPrediction(test.model, test.replicaHistory)
 			if !cmp.Equal(&err, &test.expectedErr, equateErrorMessage) {
 				t.Errorf("error mismatch (-want +got):\n%s", cmp.Diff(test.expectedErr, err, equateErrorMessage))
 				return
@@ -325,8 +325,8 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			predicter := &linear.Predict{}
-			result, err := predicter.PruneHistory(test.model, test.replicaHistory)
+			predictor := &linear.Predict{}
+			result, err := predictor.PruneHistory(test.model, test.replicaHistory)
 			if !cmp.Equal(&err, &test.expectedErr, equateErrorMessage) {
 				t.Errorf("error mismatch (-want +got):\n%s", cmp.Diff(test.expectedErr, err, equateErrorMessage))
 				return
@@ -350,8 +350,8 @@ func TestPredict_GetType(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			predicter := &linear.Predict{}
-			result := predicter.GetType()
+			predictor := &linear.Predict{}
+			result := predictor.GetType()
 			if !cmp.Equal(test.expected, result) {
 				t.Errorf("type mismatch (-want +got):\n%s", cmp.Diff(test.expected, result))
 			}

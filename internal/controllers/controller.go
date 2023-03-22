@@ -19,8 +19,11 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/collector"
+	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/prediction"
+	"sync"
 	"time"
 
 	autoscalingv1 "k8s.io/api/autoscaling/v1"
@@ -41,7 +44,6 @@ import (
 
 	"github.com/jthomperoo/k8shorizmetrics/v2"
 	jamiethompsonmev1alpha1 "github.com/jthomperoo/predictive-horizontal-pod-autoscaler/api/v1alpha1"
-	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/prediction"
 	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/scalebehavior"
 	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/validation"
 )
@@ -93,7 +95,7 @@ type PredictiveHorizontalPodAutoscalerReconciler struct {
 	Scheme      *runtime.Scheme
 	Gatherer    k8shorizmetrics.Gatherer
 	Evaluator   k8shorizmetrics.Evaluator
-	Predicter   prediction.Predicter
+	predictors  *sync.Map
 	Collector   collector.Collector
 }
 
@@ -508,7 +510,14 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) processModels(ctx context.
 			logger.V(1).Info("Using model to calculate predicted target replicas",
 				"scaleTargetRef", scaleTargetRef,
 				"model", model.Name)
-			replicas, err := r.Predicter.GetPrediction(&model, modelHistory.ReplicaHistory)
+			//每个model对应一个prediction
+			predictorI, _ := r.predictors.LoadOrStore(model, prediction.Newpredictor(&model))
+			if predictorI == nil {
+				logger.Error(errors.New("undefined model"), "failed to new prediction")
+				continue
+			}
+			predictor := predictorI.(prediction.Predictor)
+			replicas, err := predictor.Predict()
 			if err != nil {
 				// Skip this model, errored out
 				logger.Error(err, "failed to get predicted replica count",
@@ -527,8 +536,13 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) processModels(ctx context.
 				"model", model.Name)
 			modelHistory.SyncPeriodsPassed += 1
 		}
-
-		prunedHistory, err := r.Predicter.PruneHistory(&model, modelHistory.ReplicaHistory)
+		predictorI, _ := r.predictors.LoadOrStore(model, prediction.Newpredictor(&model))
+		if predictorI == nil {
+			logger.Error(errors.New("undefined model"), "failed to new prediction")
+			continue
+		}
+		predictor := predictorI.(prediction.Predictor)
+		err := predictor.PruneHistory()
 		if err != nil {
 			// Skip this model, errored out
 			logger.Error(err, "failed to prune replica history",
@@ -536,7 +550,7 @@ func (r *PredictiveHorizontalPodAutoscalerReconciler) processModels(ctx context.
 			continue
 		}
 
-		modelHistory.ReplicaHistory = prunedHistory
+		//modelHistory.ReplicaHistory = prunedHistory
 		phpaData.ModelHistories[model.Name] = modelHistory
 	}
 	//检查map中的model是否在spec中都有

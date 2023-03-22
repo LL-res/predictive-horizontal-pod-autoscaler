@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"sync"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -42,12 +43,7 @@ import (
 	"github.com/jthomperoo/k8shorizmetrics/v2/podsclient"
 
 	jamiethompsonmev1alpha1 "github.com/jthomperoo/predictive-horizontal-pod-autoscaler/api/v1alpha1"
-	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/algorithm"
 	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/controllers"
-	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/hook/http"
-	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/prediction"
-	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/prediction/holtwinters"
-	"github.com/jthomperoo/predictive-horizontal-pod-autoscaler/internal/prediction/linear"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -124,8 +120,8 @@ func main() {
 	cpuInitializationPeriod := time.Duration(300) * time.Second
 	initialReadinessDelay := time.Duration(30) * time.Second
 	tolerance := 0.1
-	pyRunner := algorithm.NewAlgorithmPython()
-	httpExec := &http.Execute{}
+	//pyRunner := algorithm.NewAlgorithmPython()
+	//httpExec := &http.Execute{}
 
 	if err = (&controllers.PredictiveHorizontalPodAutoscalerReconciler{
 		Client:      mgr.GetClient(),
@@ -133,17 +129,18 @@ func main() {
 		ScaleClient: scaleClient,
 		Gatherer:    *k8shorizmetrics.NewGatherer(metricsclient, podsclient, cpuInitializationPeriod, initialReadinessDelay),
 		Evaluator:   *k8shorizmetrics.NewEvaluator(tolerance),
-		Predicter: &prediction.ModelPredict{
-			Predicters: []prediction.Predicter{
-				&linear.Predict{
-					Runner: pyRunner,
-				},
-				&holtwinters.Predict{
-					HookExecute: httpExec,
-					Runner:      pyRunner,
-				},
-			},
-		},
+		predictors:  new(sync.Map),
+		//predictors: &prediction.ModelPredict{
+		//	predictors: []prediction.predictor{
+		//		&linear.Predict{
+		//			Runner: pyRunner,
+		//		},
+		//		&holtwinters.Predict{
+		//			HookExecute: httpExec,
+		//			Runner:      pyRunner,
+		//		},
+		//	},
+		//},
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "PredictiveHorizontalPodAutoscaler")
 		os.Exit(1)

@@ -20,24 +20,24 @@ import (
 	jamiethompsonmev1alpha1 "github.com/jthomperoo/predictive-horizontal-pod-autoscaler/api/v1alpha1"
 )
 
-// Predicter (fake) provides a way to insert functionality into a Predicter
-type Predicter struct {
+// predictor (fake) provides a way to insert functionality into a predictor
+type predictor struct {
 	GetPredictionReactor func(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error)
 	PruneHistoryReactor  func(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error)
 	GetTypeReactor       func() string
 }
 
-// GetIDsToRemove calls the fake Predicter function
-func (f *Predicter) PruneHistory(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error) {
+// GetIDsToRemove calls the fake predictor function
+func (f *predictor) PruneHistory(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) ([]jamiethompsonmev1alpha1.TimestampedReplicas, error) {
 	return f.PruneHistoryReactor(model, replicaHistory)
 }
 
-// GetPrediction calls the fake Predicter function
-func (f *Predicter) GetPrediction(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
+// GetPrediction calls the fake predictor function
+func (f *predictor) GetPrediction(model *jamiethompsonmev1alpha1.Model, replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas) (int32, error) {
 	return f.GetPredictionReactor(model, replicaHistory)
 }
 
-// GetType calls the fake Predicter function
-func (f *Predicter) GetType() string {
+// GetType calls the fake predictor function
+func (f *predictor) GetType() string {
 	return f.GetTypeReactor()
 }

@@ -48,7 +48,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 		description    string
 		expected       int32
 		expectedErr    error
-		predicter      *holtwinters.Predict
+		predictor      *holtwinters.Predict
 		model          *jamiethompsonmev1alpha1.Model
 		replicaHistory []jamiethompsonmev1alpha1.TimestampedReplicas
 	}{
@@ -954,7 +954,7 @@ func TestPredict_GetPrediction(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			result, err := test.predicter.GetPrediction(test.model, test.replicaHistory)
+			result, err := test.predictor.GetPrediction(test.model, test.replicaHistory)
 			if !cmp.Equal(&err, &test.expectedErr, equateErrorMessage) {
 				t.Errorf("error mismatch (-want +got):\n%s", cmp.Diff(test.expectedErr, err, equateErrorMessage))
 				return
@@ -1276,8 +1276,8 @@ func TestModelPredict_PruneHistory(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			predicter := &holtwinters.Predict{}
-			result, err := predicter.PruneHistory(test.model, test.replicaHistory)
+			predictor := &holtwinters.Predict{}
+			result, err := predictor.PruneHistory(test.model, test.replicaHistory)
 			if !cmp.Equal(&err, &test.expectedErr, equateErrorMessage) {
 				t.Errorf("error mismatch (-want +got):\n%s", cmp.Diff(test.expectedErr, err, equateErrorMessage))
 				return
@@ -1301,8 +1301,8 @@ func TestPredict_GetType(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			predicter := holtwinters.Predict{}
-			result := predicter.GetType()
+			predictor := holtwinters.Predict{}
+			result := predictor.GetType()
 			if !cmp.Equal(test.expected, result) {
 				t.Errorf("type mismatch (-want +got):\n%s", cmp.Diff(test.expected, result))
 			}
